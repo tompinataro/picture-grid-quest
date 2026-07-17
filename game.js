@@ -30,70 +30,393 @@ function sceneImage(seed) {
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   const palettes = [
-    ["#7fc8ff", "#fbf4be", "#4fb477", "#e74645", "#f8d84e"],
-    ["#23395b", "#55dde0", "#f6ae2d", "#f26419", "#f7f7ff"],
-    ["#f7c6d9", "#ffefbd", "#93d8c5", "#f05d5e", "#5b5f97"],
-    ["#c4e7d4", "#56a3a6", "#084c61", "#db504a", "#e3b505"],
-    ["#f4f1de", "#81b29a", "#3d405b", "#e07a5f", "#f2cc8f"],
-    ["#b8f2e6", "#aed9e0", "#ffa69e", "#faf3dd", "#5e6472"]
+    { sky: ["#79c7ff", "#f8f2ba"], land: "#72b05f", dark: "#32694b", accent: "#e43f3f", extra: "#f8d84e" },
+    { sky: ["#0e2f59", "#49b6d8"], land: "#f0b84d", dark: "#443d74", accent: "#ff6b35", extra: "#fff3c4" },
+    { sky: ["#ffc4d8", "#fff0b7"], land: "#8fd2bf", dark: "#4d5d8f", accent: "#f05d5e", extra: "#ffe066" },
+    { sky: ["#a6d9ff", "#f7e6b1"], land: "#4f9d69", dark: "#145a67", accent: "#db504a", extra: "#f2c14e" },
+    { sky: ["#e9f1d3", "#86c7b9"], land: "#81b29a", dark: "#3d405b", accent: "#e07a5f", extra: "#f2cc8f" },
+    { sky: ["#b8f2e6", "#fff1d0"], land: "#60b88a", dark: "#3f5570", accent: "#ffa69e", extra: "#f9d56e" }
   ];
   const colors = palettes[seed % palettes.length];
   const sky = ctx.createLinearGradient(0, 0, 0, size);
-  sky.addColorStop(0, colors[0]);
-  sky.addColorStop(0.54, colors[1]);
-  sky.addColorStop(1, colors[2]);
+  sky.addColorStop(0, colors.sky[0]);
+  sky.addColorStop(1, colors.sky[1]);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, size, size);
 
-  ctx.fillStyle = colors[2];
-  for (let i = 0; i < 9; i += 1) {
-    const y = 720 + i * 38;
+  drawSun(ctx, 980, 170, colors.extra);
+  drawCloud(ctx, 205, 210, 1.35);
+  drawCloud(ctx, 780, 310, 0.9);
+  drawHills(ctx, colors);
+
+  const scene = seed % 6;
+  if (scene === 0) drawMushroomCottage(ctx, colors);
+  if (scene === 1) drawHarborLighthouse(ctx, colors);
+  if (scene === 2) drawGardenTeaTable(ctx, colors);
+  if (scene === 3) drawMountainTrain(ctx, colors);
+  if (scene === 4) drawBalloonFestival(ctx, colors);
+  if (scene === 5) drawSpacePark(ctx, colors);
+
+  drawPuzzleGuides(ctx);
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
+
+function drawSun(ctx, x, y, color) {
+  const glow = ctx.createRadialGradient(x, y, 20, x, y, 150);
+  glow.addColorStop(0, "rgba(255,255,255,0.95)");
+  glow.addColorStop(0.35, color);
+  glow.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, 160, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawCloud(ctx, x, y, scale) {
+  ctx.fillStyle = "rgba(255,255,255,0.86)";
+  [[0, 0, 58], [56, -25, 74], [132, -5, 58], [82, 20, 82]].forEach(([dx, dy, r]) => {
+    ctx.beginPath();
+    ctx.arc(x + dx * scale, y + dy * scale, r * scale, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawHills(ctx, colors) {
+  ctx.fillStyle = colors.land;
+  ctx.beginPath();
+  ctx.moveTo(0, 650);
+  ctx.bezierCurveTo(180, 540, 330, 705, 520, 600);
+  ctx.bezierCurveTo(720, 490, 900, 660, 1200, 515);
+  ctx.lineTo(1200, 1200);
+  ctx.lineTo(0, 1200);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = colors.dark;
+  ctx.globalAlpha = 0.24;
+  ctx.beginPath();
+  ctx.moveTo(0, 785);
+  ctx.bezierCurveTo(260, 690, 450, 820, 680, 725);
+  ctx.bezierCurveTo(870, 640, 1040, 790, 1200, 700);
+  ctx.lineTo(1200, 1200);
+  ctx.lineTo(0, 1200);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawMushroomCottage(ctx, colors) {
+  drawPath(ctx, 520, 1180, 610, 725, "#f4d69a");
+  ctx.fillStyle = "#f8edd8";
+  roundedRect(ctx, 365, 575, 440, 390, 42);
+  ctx.fill();
+  ctx.fillStyle = colors.accent;
+  ctx.beginPath();
+  ctx.ellipse(590, 570, 300, 145, -0.04, Math.PI, 0);
+  ctx.lineTo(890, 575);
+  ctx.bezierCurveTo(800, 720, 415, 720, 292, 570);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  [[420, 510, 55], [535, 450, 38], [675, 515, 70], [785, 570, 38]].forEach(([x, y, r]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  drawWindow(ctx, 435, 700, 95, 95, "#7cc7ff");
+  drawWindow(ctx, 650, 690, 110, 100, "#ffd17a");
+  ctx.fillStyle = "#8b5a3a";
+  roundedRect(ctx, 525, 780, 115, 185, 58);
+  ctx.fill();
+  drawFlowers(ctx, colors);
+}
+
+function drawHarborLighthouse(ctx, colors) {
+  ctx.fillStyle = "#2e8cc6";
+  ctx.fillRect(0, 780, 1200, 420);
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.lineWidth = 5;
+  for (let y = 825; y < 1160; y += 55) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    for (let x = 0; x <= size; x += 80) {
-      ctx.lineTo(x, y + Math.sin((x + seed * 70) / 90) * 28);
-    }
-    ctx.lineTo(size, size);
-    ctx.lineTo(0, size);
-    ctx.closePath();
-    ctx.globalAlpha = 0.23 + i * 0.06;
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  for (let i = 0; i < 18; i += 1) {
-    const x = ((i * 173 + seed * 89) % 1050) + 70;
-    const y = ((i * 119 + seed * 61) % 830) + 80;
-    const r = 26 + ((i * 17 + seed * 11) % 82);
-    ctx.fillStyle = colors[(i + 3) % colors.length];
-    ctx.beginPath();
-    ctx.arc(x, y, r, Math.PI, 0);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.82)";
-    ctx.beginPath();
-    ctx.ellipse(x - r * 0.35, y - r * 0.28, r * 0.22, r * 0.1, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#f7f2d8";
-    ctx.fillRect(x - r * 0.16, y, r * 0.32, r * 0.9);
-  }
-
-  for (let i = 0; i < 30; i += 1) {
-    const x = ((i * 97 + seed * 151) % size);
-    const y = ((i * 137 + seed * 47) % 680) + 35;
-    ctx.strokeStyle = "rgba(255,255,255,0.8)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(x - 11, y);
-    ctx.lineTo(x + 11, y);
-    ctx.moveTo(x, y - 11);
-    ctx.lineTo(x, y + 11);
+    ctx.bezierCurveTo(260, y - 35, 370, y + 40, 610, y);
+    ctx.bezierCurveTo(830, y - 35, 990, y + 35, 1200, y - 5);
     ctx.stroke();
   }
+  ctx.fillStyle = "#f8f4df";
+  ctx.fillRect(220, 345, 165, 520);
+  ctx.fillStyle = colors.accent;
+  for (let y = 435; y < 800; y += 110) {
+    ctx.fillRect(220, y, 165, 48);
+  }
+  ctx.fillStyle = colors.dark;
+  ctx.fillRect(200, 305, 205, 55);
+  ctx.beginPath();
+  ctx.moveTo(220, 305);
+  ctx.lineTo(302, 230);
+  ctx.lineTo(385, 305);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#ffe78a";
+  ctx.fillRect(270, 250, 65, 55);
+  drawBoat(ctx, 725, 845, 1.35, colors);
+  drawBoat(ctx, 915, 1010, 0.78, colors);
+}
 
-  ctx.fillStyle = "rgba(255,255,255,0.88)";
-  ctx.font = "900 190px ui-sans-serif, system-ui";
-  ctx.fillText(String(seed + 1), 72, 230);
-  return canvas.toDataURL("image/jpeg", 0.9);
+function drawGardenTeaTable(ctx, colors) {
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  roundedRect(ctx, 305, 555, 590, 350, 36);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.ellipse(605, 790, 240, 96, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = colors.dark;
+  ctx.lineWidth = 13;
+  ctx.beginPath();
+  ctx.moveTo(420, 870);
+  ctx.lineTo(380, 1060);
+  ctx.moveTo(790, 870);
+  ctx.lineTo(840, 1060);
+  ctx.stroke();
+  ctx.fillStyle = colors.accent;
+  roundedRect(ctx, 480, 670, 145, 95, 22);
+  ctx.fill();
+  ctx.fillStyle = colors.extra;
+  ctx.beginPath();
+  ctx.ellipse(715, 695, 70, 45, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawFlowers(ctx, colors);
+  drawVine(ctx, colors);
+}
+
+function drawMountainTrain(ctx, colors) {
+  ctx.fillStyle = "#dfe8f1";
+  ctx.beginPath();
+  ctx.moveTo(0, 700);
+  ctx.lineTo(265, 335);
+  ctx.lineTo(420, 590);
+  ctx.lineTo(610, 280);
+  ctx.lineTo(875, 640);
+  ctx.lineTo(1040, 420);
+  ctx.lineTo(1200, 700);
+  ctx.closePath();
+  ctx.fill();
+  drawPath(ctx, 0, 1000, 1200, 840, "#6f5d4d");
+  ctx.fillStyle = colors.accent;
+  roundedRect(ctx, 360, 725, 390, 130, 20);
+  ctx.fill();
+  ctx.fillStyle = colors.extra;
+  roundedRect(ctx, 735, 745, 210, 110, 18);
+  ctx.fill();
+  ctx.fillStyle = colors.dark;
+  [430, 615, 805, 910].forEach(x => {
+    ctx.beginPath();
+    ctx.arc(x, 865, 38, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.fillStyle = "#dff6ff";
+  [400, 500, 600, 780, 860].forEach(x => {
+    ctx.fillRect(x, 758, 62, 45);
+  });
+}
+
+function drawBalloonFestival(ctx, colors) {
+  drawPath(ctx, 170, 1200, 980, 700, "#f7d193");
+  [[350, 435, 1.2], [700, 315, 1.55], [930, 520, 0.9]].forEach(([x, y, scale], index) => {
+    ctx.fillStyle = [colors.accent, colors.extra, colors.dark][index];
+    ctx.beginPath();
+    ctx.ellipse(x, y, 95 * scale, 135 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 130 * scale);
+    ctx.bezierCurveTo(x - 48 * scale, y - 40 * scale, x - 50 * scale, y + 55 * scale, x, y + 132 * scale);
+    ctx.bezierCurveTo(x + 50 * scale, y + 55 * scale, x + 48 * scale, y - 40 * scale, x, y - 130 * scale);
+    ctx.stroke();
+    ctx.fillStyle = "#9a6a3c";
+    ctx.fillRect(x - 28 * scale, y + 150 * scale, 56 * scale, 38 * scale);
+  });
+  drawFlowers(ctx, colors);
+}
+
+function drawSpacePark(ctx, colors) {
+  ctx.fillStyle = "rgba(11,20,46,0.55)";
+  ctx.fillRect(0, 0, 1200, 1200);
+  drawStars(ctx);
+  drawPath(ctx, 585, 1200, 680, 700, "#bfc8d9");
+  ctx.fillStyle = "#f8f4df";
+  ctx.beginPath();
+  ctx.moveTo(590, 730);
+  ctx.bezierCurveTo(455, 575, 505, 330, 655, 210);
+  ctx.bezierCurveTo(810, 335, 875, 570, 720, 730);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = colors.accent;
+  ctx.beginPath();
+  ctx.moveTo(555, 620);
+  ctx.lineTo(410, 810);
+  ctx.lineTo(595, 760);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(755, 620);
+  ctx.lineTo(910, 810);
+  ctx.lineTo(715, 760);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#76d6ff";
+  ctx.beginPath();
+  ctx.arc(655, 430, 72, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = colors.extra;
+  ctx.beginPath();
+  ctx.moveTo(610, 730);
+  ctx.lineTo(700, 730);
+  ctx.lineTo(655, 1030);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawPath(ctx, startX, startY, endX, endY, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(startX - 95, startY);
+  ctx.bezierCurveTo(startX + 130, 985, endX - 140, 885, endX - 50, endY);
+  ctx.lineTo(endX + 55, endY);
+  ctx.bezierCurveTo(endX - 30, 910, startX + 265, 1030, startX + 120, startY);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawWindow(ctx, x, y, w, h, color) {
+  ctx.fillStyle = color;
+  roundedRect(ctx, x, y, w, h, 24);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(40,50,60,0.45)";
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2, y + 8);
+  ctx.lineTo(x + w / 2, y + h - 8);
+  ctx.moveTo(x + 8, y + h / 2);
+  ctx.lineTo(x + w - 8, y + h / 2);
+  ctx.stroke();
+}
+
+function drawFlowers(ctx, colors) {
+  for (let i = 0; i < 34; i += 1) {
+    const x = 80 + ((i * 137) % 1020);
+    const y = 825 + ((i * 73) % 275);
+    ctx.fillStyle = [colors.accent, colors.extra, "#ffffff"][i % 3];
+    for (let p = 0; p < 5; p += 1) {
+      ctx.beginPath();
+      ctx.arc(x + Math.cos(p * 1.26) * 11, y + Math.sin(p * 1.26) * 11, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#ffd45a";
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawVine(ctx, colors) {
+  ctx.strokeStyle = colors.dark;
+  ctx.lineWidth = 13;
+  ctx.beginPath();
+  ctx.moveTo(110, 575);
+  ctx.bezierCurveTo(280, 390, 455, 650, 610, 470);
+  ctx.bezierCurveTo(780, 285, 975, 545, 1110, 360);
+  ctx.stroke();
+}
+
+function drawBoat(ctx, x, y, scale, colors) {
+  ctx.fillStyle = colors.accent;
+  ctx.beginPath();
+  ctx.moveTo(x - 145 * scale, y);
+  ctx.lineTo(x + 155 * scale, y);
+  ctx.lineTo(x + 95 * scale, y + 75 * scale);
+  ctx.lineTo(x - 95 * scale, y + 75 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#fff6d6";
+  ctx.beginPath();
+  ctx.moveTo(x - 15 * scale, y - 250 * scale);
+  ctx.lineTo(x - 15 * scale, y - 20 * scale);
+  ctx.lineTo(x + 135 * scale, y - 20 * scale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = colors.dark;
+  ctx.lineWidth = 8 * scale;
+  ctx.beginPath();
+  ctx.moveTo(x - 20 * scale, y - 255 * scale);
+  ctx.lineTo(x - 20 * scale, y);
+  ctx.stroke();
+}
+
+function drawStars(ctx) {
+  ctx.strokeStyle = "rgba(255,255,255,0.82)";
+  ctx.lineWidth = 4;
+  for (let i = 0; i < 42; i += 1) {
+    const x = 40 + ((i * 151) % 1120);
+    const y = 40 + ((i * 89) % 630);
+    ctx.beginPath();
+    ctx.moveTo(x - 12, y);
+    ctx.lineTo(x + 12, y);
+    ctx.moveTo(x, y - 12);
+    ctx.lineTo(x, y + 12);
+    ctx.stroke();
+  }
+}
+
+function drawPuzzleGuides(ctx) {
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.lineWidth = 5;
+  for (let i = 1; i < 4; i += 1) {
+    const p = i * 300;
+    ctx.beginPath();
+    ctx.moveTo(p, 0);
+    ctx.lineTo(p, 1200);
+    ctx.moveTo(0, p);
+    ctx.lineTo(1200, p);
+    ctx.stroke();
+  }
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+function squareImageFromFile(file, onLoad) {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    const image = new Image();
+    image.addEventListener("load", () => {
+      const canvas = document.createElement("canvas");
+      const size = 1200;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const scale = Math.max(size / image.width, size / image.height);
+      const width = image.width * scale;
+      const height = image.height * scale;
+      ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+      onLoad(canvas.toDataURL("image/jpeg", 0.92));
+    });
+    image.src = String(reader.result);
+  });
+  reader.readAsDataURL(file);
 }
 
 function bootstrapImages() {
@@ -181,7 +504,6 @@ function renderBoard() {
     button.style.backgroundPosition = `${(correctCol / (state.grid - 1)) * 100}% ${(correctRow / (state.grid - 1)) * 100}%`;
     button.ariaLabel = `Tile ${position + 1}`;
     if (position === state.selectedIndex) button.classList.add("selected");
-    if (tileId === position) button.classList.add("fixed");
     button.addEventListener("click", () => selectTile(position));
     board.append(button);
   }
@@ -240,14 +562,12 @@ function chooseNextImage() {
 photoInput.addEventListener("change", () => {
   const files = Array.from(photoInput.files || []).filter(file => file.type.startsWith("image/"));
   files.forEach(file => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      state.images.push({ name: file.name, src: String(reader.result) });
+    squareImageFromFile(file, src => {
+      state.images.push({ name: file.name, src });
       state.imageIndex = state.images.length - 1;
       renderGallery();
       startPuzzle();
     });
-    reader.readAsDataURL(file);
   });
   photoInput.value = "";
 });
