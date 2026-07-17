@@ -7,6 +7,7 @@ const progressFill = document.querySelector("#progressFill");
 const pictureCount = document.querySelector("#pictureCount");
 const gallery = document.querySelector("#gallery");
 const photoInput = document.querySelector("#photoInput");
+const undoButton = document.querySelector("#undoButton");
 const preview = document.querySelector("#preview");
 const previewImage = document.querySelector("#previewImage");
 const winDialog = document.querySelector("#winDialog");
@@ -18,6 +19,9 @@ const state = {
   solvedAtGrid: 0,
   moves: 0,
   selectedIndex: null,
+  drag: null,
+  history: [],
+  suppressDialogClose: false,
   imageIndex: 0,
   images: [],
   tiles: []
@@ -439,6 +443,7 @@ function updateHud() {
   progressText.textContent = `${state.solvedAtGrid} / ${needed}`;
   progressFill.style.width = `${Math.min(100, (state.solvedAtGrid / needed) * 100)}%`;
   pictureCount.textContent = String(state.images.length);
+  undoButton.disabled = state.history.length === 0;
 }
 
 function renderGallery() {
@@ -479,10 +484,50 @@ function shuffleTiles(tiles) {
 function startPuzzle() {
   state.moves = 0;
   state.selectedIndex = null;
+  state.drag = null;
+  state.history = [];
   state.tiles = shuffleTiles(makeSolvedTiles());
   preview.classList.remove("visible");
   renderBoard();
   updateHud();
+}
+
+function createSnapshot() {
+  return {
+    level: state.level,
+    grid: state.grid,
+    solvedAtGrid: state.solvedAtGrid,
+    moves: state.moves,
+    selectedIndex: state.selectedIndex,
+    imageIndex: state.imageIndex,
+    tiles: [...state.tiles]
+  };
+}
+
+function restoreSnapshot(snapshot) {
+  state.level = snapshot.level;
+  state.grid = snapshot.grid;
+  state.solvedAtGrid = snapshot.solvedAtGrid;
+  state.moves = snapshot.moves;
+  state.selectedIndex = snapshot.selectedIndex;
+  state.imageIndex = snapshot.imageIndex;
+  state.tiles = [...snapshot.tiles];
+  state.drag = null;
+  state.suppressDialogClose = false;
+  preview.classList.remove("visible");
+  renderGallery();
+  renderBoard();
+  updateHud();
+}
+
+function undoLastMove() {
+  const snapshot = state.history.pop();
+  if (!snapshot) return;
+  if (winDialog.open) {
+    state.suppressDialogClose = true;
+    winDialog.close();
+  }
+  restoreSnapshot(snapshot);
 }
 
 function renderBoard() {
@@ -501,6 +546,7 @@ function renderBoard() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "tile";
+    button.dataset.position = String(position);
     button.style.backgroundImage = `url("${image.src}")`;
     button.style.backgroundSize = `${state.grid * 100}% ${state.grid * 100}%`;
     button.style.backgroundPosition = `${(correctCol / (state.grid - 1)) * 100}% ${(correctRow / (state.grid - 1)) * 100}%`;
@@ -510,7 +556,11 @@ function renderBoard() {
     if (isConnectedRight(position)) button.classList.add("connected-right");
     if (isConnectedDown(position)) button.classList.add("connected-down");
     if (selectedSet.has(position)) button.classList.add("selected");
-    button.addEventListener("click", () => selectTile(position));
+    if (state.drag?.source === position) button.classList.add("dragging");
+    button.addEventListener("pointerdown", event => startDrag(event, position));
+    button.addEventListener("pointermove", moveDrag);
+    button.addEventListener("pointerup", endDrag);
+    button.addEventListener("pointercancel", cancelDrag);
     board.append(button);
   }
 }
@@ -570,6 +620,55 @@ function getConnectedComponent(startPosition) {
   return [...visited].sort((first, second) => first - second);
 }
 
+function startDrag(event, position) {
+  if (event.button !== 0 && event.pointerType === "mouse") return;
+  event.preventDefault();
+  state.drag = {
+    source: position,
+    startX: event.clientX,
+    startY: event.clientY,
+    moved: false
+  };
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.currentTarget.classList.add("dragging");
+}
+
+function moveDrag(event) {
+  if (!state.drag) return;
+  const distance = Math.hypot(event.clientX - state.drag.startX, event.clientY - state.drag.startY);
+  if (distance > 8) state.drag.moved = true;
+}
+
+function endDrag(event) {
+  if (!state.drag) return;
+  const drag = state.drag;
+  state.drag = null;
+  const targetPosition = drag.moved ? positionFromPoint(event.clientX, event.clientY) : drag.source;
+
+  if (drag.moved) {
+    if (targetPosition !== null && targetPosition !== drag.source) {
+      commitMove(drag.source, targetPosition);
+      return;
+    }
+    renderBoard();
+    return;
+  }
+
+  selectTile(drag.source);
+}
+
+function cancelDrag() {
+  state.drag = null;
+  renderBoard();
+}
+
+function positionFromPoint(clientX, clientY) {
+  const target = document.elementFromPoint(clientX, clientY);
+  const tile = target?.closest?.(".tile");
+  if (!tile || !board.contains(tile)) return null;
+  return Number(tile.dataset.position);
+}
+
 function selectTile(position) {
   if (state.selectedIndex === null) {
     state.selectedIndex = position;
@@ -583,9 +682,17 @@ function selectTile(position) {
     return;
   }
 
-  const moved = moveSelectedCluster(position);
+  commitMove(state.selectedIndex, position);
+}
+
+function commitMove(sourcePosition, targetPosition) {
+  const snapshot = createSnapshot();
+  const moved = moveSelectedCluster(sourcePosition, targetPosition);
   state.selectedIndex = null;
-  if (moved) state.moves += 1;
+  if (moved) {
+    state.history.push(snapshot);
+    state.moves += 1;
+  }
   renderBoard();
   updateHud();
 
@@ -594,8 +701,7 @@ function selectTile(position) {
   }
 }
 
-function moveSelectedCluster(targetPosition) {
-  const sourceAnchor = state.selectedIndex;
+function moveSelectedCluster(sourceAnchor, targetPosition) {
   const component = getConnectedComponent(sourceAnchor);
   const movableSources = getMovableClusterSources(component, sourceAnchor, targetPosition);
   if (movableSources.length === 0) return false;
@@ -707,6 +813,7 @@ photoInput.addEventListener("change", () => {
 });
 
 document.querySelector("#newPuzzleButton").addEventListener("click", startPuzzle);
+undoButton.addEventListener("click", undoLastMove);
 document.querySelector("#hintButton").addEventListener("pointerdown", () => preview.classList.add("visible"));
 document.querySelector("#hintButton").addEventListener("pointerup", () => preview.classList.remove("visible"));
 document.querySelector("#hintButton").addEventListener("pointerleave", () => preview.classList.remove("visible"));
@@ -714,7 +821,13 @@ document.querySelector("#hintButton").addEventListener("click", () => {
   preview.classList.toggle("visible");
   window.setTimeout(() => preview.classList.remove("visible"), 1300);
 });
-winDialog.addEventListener("close", chooseNextImage);
+winDialog.addEventListener("close", () => {
+  if (state.suppressDialogClose) {
+    state.suppressDialogClose = false;
+    return;
+  }
+  chooseNextImage();
+});
 
 bootstrapImages();
 startPuzzle();

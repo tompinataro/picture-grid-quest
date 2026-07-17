@@ -44,12 +44,13 @@ input {
 
 .topbar {
   display: grid;
-  grid-template-columns: 48px minmax(80px, 1fr) minmax(90px, 1fr) 48px;
+  grid-template-columns: 48px minmax(92px, 130px) minmax(80px, 1fr) minmax(90px, 1fr) 48px;
   gap: 12px;
   align-items: center;
 }
 
 .icon-button,
+.undo-button,
 .primary {
   border: 1px solid var(--line);
   color: var(--text);
@@ -67,7 +68,30 @@ input {
   box-shadow: 0 8px 22px var(--shadow);
 }
 
+.undo-button {
+  min-width: 0;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  box-shadow: 0 8px 22px var(--shadow);
+}
+
+.undo-button span:first-child {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.undo-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .icon-button:hover,
+.undo-button:not(:disabled):hover,
 .primary:hover,
 .upload:hover {
   border-color: rgba(255, 212, 90, 0.7);
@@ -132,6 +156,8 @@ input {
   background-color: #22313c;
   background-repeat: no-repeat;
   cursor: pointer;
+  touch-action: none;
+  user-select: none;
   box-shadow: none;
   transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
 }
@@ -172,6 +198,12 @@ input {
   z-index: 2;
   transform: scale(0.96);
   box-shadow: inset 0 0 0 4px var(--accent), 0 0 0 3px rgba(0, 0, 0, 0.55);
+}
+
+.tile.dragging {
+  z-index: 3;
+  filter: brightness(1.14);
+  box-shadow: inset 0 0 0 4px var(--accent), 0 0 0 4px rgba(0, 0, 0, 0.42);
 }
 
 .preview {
@@ -340,14 +372,21 @@ dialog::backdrop {
 
 @media (max-width: 520px) {
   .topbar {
-    grid-template-columns: 42px 1fr 1fr 42px;
+    grid-template-columns: 42px minmax(76px, 96px) 1fr 1fr 42px;
     gap: 8px;
   }
 
-  .icon-button {
+  .icon-button,
+  .undo-button {
     width: 42px;
     height: 42px;
     font-size: 22px;
+  }
+
+  .undo-button {
+    width: auto;
+    gap: 5px;
+    font-size: 13px;
   }
 
   .level-status {

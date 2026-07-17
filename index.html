@@ -12,6 +12,10 @@
         <button class="icon-button" id="newPuzzleButton" type="button" title="New puzzle" aria-label="New puzzle">
           <span aria-hidden="true">↻</span>
         </button>
+        <button class="undo-button" id="undoButton" type="button" title="Undo last move" aria-label="Undo last move">
+          <span aria-hidden="true">←</span>
+          <span>Undo</span>
+        </button>
         <div class="level-status">
           <span class="label">Level</span>
           <strong id="levelNumber">1</strong>
@@ -61,7 +65,7 @@
           <div class="gallery" id="gallery" aria-label="Picture choices"></div>
 
           <p class="rules">
-            Swap two squares to rebuild the picture. A 4x4 grid needs 3 completed pictures, a 5x5 needs 4, and each new grid follows the same pattern.
+            Drag a square or connected group to rebuild the picture. A 4x4 grid needs 3 completed pictures, a 5x5 needs 4, and each new grid follows the same pattern.
           </p>
         </aside>
       </section>
