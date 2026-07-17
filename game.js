@@ -488,6 +488,8 @@ function startPuzzle() {
 function renderBoard() {
   const image = state.images[state.imageIndex];
   const total = state.grid * state.grid;
+  const selectedPositions = state.selectedIndex === null ? [] : getConnectedComponent(state.selectedIndex);
+  const selectedSet = new Set(selectedPositions);
   board.style.gridTemplateColumns = `repeat(${state.grid}, 1fr)`;
   board.innerHTML = "";
   previewImage.src = image.src;
@@ -507,7 +509,7 @@ function renderBoard() {
     if (hasBottomEdge(position)) button.classList.add("edge-bottom");
     if (isConnectedRight(position)) button.classList.add("connected-right");
     if (isConnectedDown(position)) button.classList.add("connected-down");
-    if (position === state.selectedIndex) button.classList.add("selected");
+    if (selectedSet.has(position)) button.classList.add("selected");
     button.addEventListener("click", () => selectTile(position));
     board.append(button);
   }
@@ -533,6 +535,41 @@ function isConnectedDown(position) {
   return state.tiles[position + state.grid] === state.tiles[position] + state.grid;
 }
 
+function neighboringPositions(position) {
+  const neighbors = [];
+  const row = Math.floor(position / state.grid);
+  const col = position % state.grid;
+  if (col > 0) neighbors.push(position - 1);
+  if (col < state.grid - 1) neighbors.push(position + 1);
+  if (row > 0) neighbors.push(position - state.grid);
+  if (row < state.grid - 1) neighbors.push(position + state.grid);
+  return neighbors;
+}
+
+function arePositionsConnected(first, second) {
+  if (second === first + 1) return isConnectedRight(first);
+  if (second === first - 1) return isConnectedRight(second);
+  if (second === first + state.grid) return isConnectedDown(first);
+  if (second === first - state.grid) return isConnectedDown(second);
+  return false;
+}
+
+function getConnectedComponent(startPosition) {
+  const visited = new Set([startPosition]);
+  const queue = [startPosition];
+
+  while (queue.length > 0) {
+    const position = queue.shift();
+    neighboringPositions(position).forEach(neighbor => {
+      if (visited.has(neighbor) || !arePositionsConnected(position, neighbor)) return;
+      visited.add(neighbor);
+      queue.push(neighbor);
+    });
+  }
+
+  return [...visited].sort((first, second) => first - second);
+}
+
 function selectTile(position) {
   if (state.selectedIndex === null) {
     state.selectedIndex = position;
@@ -540,21 +577,94 @@ function selectTile(position) {
     return;
   }
 
-  if (state.selectedIndex === position) {
+  if (getConnectedComponent(state.selectedIndex).includes(position)) {
     state.selectedIndex = null;
     renderBoard();
     return;
   }
 
-  [state.tiles[state.selectedIndex], state.tiles[position]] = [state.tiles[position], state.tiles[state.selectedIndex]];
+  const moved = moveSelectedCluster(position);
   state.selectedIndex = null;
-  state.moves += 1;
+  if (moved) state.moves += 1;
   renderBoard();
   updateHud();
 
   if (isSolved()) {
     completePuzzle();
   }
+}
+
+function moveSelectedCluster(targetPosition) {
+  const sourceAnchor = state.selectedIndex;
+  const component = getConnectedComponent(sourceAnchor);
+  const movableSources = getMovableClusterSources(component, sourceAnchor, targetPosition);
+  if (movableSources.length === 0) return false;
+
+  const sourceAnchorRow = Math.floor(sourceAnchor / state.grid);
+  const sourceAnchorCol = sourceAnchor % state.grid;
+  const targetRow = Math.floor(targetPosition / state.grid);
+  const targetCol = targetPosition % state.grid;
+  const sourceSet = new Set(movableSources);
+  const movePairs = movableSources.map(source => {
+    const sourceRow = Math.floor(source / state.grid);
+    const sourceCol = source % state.grid;
+    const destination = (targetRow + sourceRow - sourceAnchorRow) * state.grid + targetCol + sourceCol - sourceAnchorCol;
+    return { source, destination };
+  });
+  const destinationSet = new Set(movePairs.map(pair => pair.destination));
+  const nextTiles = [...state.tiles];
+  const displacedTiles = movePairs
+    .filter(pair => !sourceSet.has(pair.destination))
+    .map(pair => state.tiles[pair.destination]);
+  const vacatedSources = movePairs
+    .filter(pair => !destinationSet.has(pair.source))
+    .map(pair => pair.source);
+
+  movePairs.forEach(pair => {
+    nextTiles[pair.destination] = state.tiles[pair.source];
+  });
+  vacatedSources.forEach((source, index) => {
+    nextTiles[source] = displacedTiles[index];
+  });
+
+  if (nextTiles.every((tile, index) => tile === state.tiles[index])) return false;
+  state.tiles = nextTiles;
+  return true;
+}
+
+function getMovableClusterSources(component, sourceAnchor, targetPosition) {
+  const sourceAnchorRow = Math.floor(sourceAnchor / state.grid);
+  const sourceAnchorCol = sourceAnchor % state.grid;
+  const targetRow = Math.floor(targetPosition / state.grid);
+  const targetCol = targetPosition % state.grid;
+  const componentSet = new Set(component);
+  const inBounds = new Set();
+
+  component.forEach(source => {
+    const sourceRow = Math.floor(source / state.grid);
+    const sourceCol = source % state.grid;
+    const destinationRow = targetRow + sourceRow - sourceAnchorRow;
+    const destinationCol = targetCol + sourceCol - sourceAnchorCol;
+    if (destinationRow >= 0 && destinationRow < state.grid && destinationCol >= 0 && destinationCol < state.grid) {
+      inBounds.add(source);
+    }
+  });
+
+  if (!inBounds.has(sourceAnchor)) return [];
+
+  const kept = new Set([sourceAnchor]);
+  const queue = [sourceAnchor];
+  while (queue.length > 0) {
+    const source = queue.shift();
+    neighboringPositions(source).forEach(neighbor => {
+      if (!componentSet.has(neighbor) || !inBounds.has(neighbor) || kept.has(neighbor)) return;
+      if (!arePositionsConnected(source, neighbor)) return;
+      kept.add(neighbor);
+      queue.push(neighbor);
+    });
+  }
+
+  return [...kept].sort((first, second) => first - second);
 }
 
 function isSolved() {
