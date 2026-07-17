@@ -503,10 +503,34 @@ function renderBoard() {
     button.style.backgroundSize = `${state.grid * 100}% ${state.grid * 100}%`;
     button.style.backgroundPosition = `${(correctCol / (state.grid - 1)) * 100}% ${(correctRow / (state.grid - 1)) * 100}%`;
     button.ariaLabel = `Tile ${position + 1}`;
+    if (hasRightEdge(position)) button.classList.add("edge-right");
+    if (hasBottomEdge(position)) button.classList.add("edge-bottom");
+    if (isConnectedRight(position)) button.classList.add("connected-right");
+    if (isConnectedDown(position)) button.classList.add("connected-down");
     if (position === state.selectedIndex) button.classList.add("selected");
     button.addEventListener("click", () => selectTile(position));
     board.append(button);
   }
+}
+
+function hasRightEdge(position) {
+  return position % state.grid !== state.grid - 1;
+}
+
+function hasBottomEdge(position) {
+  return Math.floor(position / state.grid) !== state.grid - 1;
+}
+
+function isConnectedRight(position) {
+  if (!hasRightEdge(position)) return false;
+  const tileId = state.tiles[position];
+  const rightTileId = state.tiles[position + 1];
+  return rightTileId === tileId + 1 && Math.floor(tileId / state.grid) === Math.floor(rightTileId / state.grid);
+}
+
+function isConnectedDown(position) {
+  if (!hasBottomEdge(position)) return false;
+  return state.tiles[position + state.grid] === state.tiles[position] + state.grid;
 }
 
 function selectTile(position) {
